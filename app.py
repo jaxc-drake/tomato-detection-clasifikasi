@@ -92,16 +92,13 @@ LABEL_TRANSLATE = {
 def get_label_info(prediction_class):
     if prediction_class in LABEL_TRANSLATE:
         return LABEL_TRANSLATE[prediction_class]
-
     pred_lower = prediction_class.lower().replace(" ", "_").replace("-", "_")
     for key, val in LABEL_TRANSLATE.items():
         if key.lower().replace("-", "_") == pred_lower:
             return val
-
     for key, val in LABEL_TRANSLATE.items():
         if pred_lower in key.lower() or key.lower() in pred_lower:
             return val
-
     return {
         "id": prediction_class,
         "emoji": "🔍",
@@ -111,17 +108,20 @@ def get_label_info(prediction_class):
     }
 
 def roboflow_infer(image_path):
-    """Kirim gambar ke Roboflow API pakai requests (tanpa inference_sdk)"""
+    """Kirim gambar ke Roboflow API - support classification & detection"""
     with open(image_path, "rb") as f:
         image_data = base64.b64encode(f.read()).decode("utf-8")
 
-    url = f"https://serverless.roboflow.com/{MODEL_ID}?api_key={ROBOFLOW_API_KEY}"
+    # Coba classification endpoint dulu
+    url = f"https://classify.roboflow.com/{MODEL_ID}?api_key={ROBOFLOW_API_KEY}"
     response = requests.post(
         url,
-        json={"image": image_data},
-        headers={"Content-Type": "application/json"}
+        data=image_data,
+        headers={"Content-Type": "application/x-www-form-urlencoded"}
     )
-    return response.json()
+    result = response.json()
+    print("ROBOFLOW RESPONSE:", result)
+    return result
 
 
 app = Flask(__name__)
@@ -148,20 +148,33 @@ def detect():
     try:
         result = roboflow_infer(save_path)
 
-        top_class = result.get("top")
-        if top_class:
-            prediction_class = top_class
+        # Handle classification format: {"top": "class", "confidence": 0.99, "predictions": {...}}
+        prediction_class = None
+        confidence = 0
+
+        # Format 1: classification - ada key "top"
+        if result.get("top"):
+            prediction_class = result["top"]
             confidence = round(result.get("confidence", 0) * 100, 1)
-        else:
-            predictions = result.get("predictions", [])
-            if predictions:
-                best = max(predictions, key=lambda x: x.get("confidence", 0))
-                prediction_class = best.get("class", "Unknown")
-                confidence = round(best.get("confidence", 0) * 100, 1)
-            else:
-                prediction_class = "Unknown"
-                confidence = 0
-                
+
+        # Format 2: classification - ada key "predictions" berupa dict
+        elif isinstance(result.get("predictions"), dict):
+            preds = result["predictions"]
+            if preds:
+                best_class = max(preds, key=lambda k: preds[k])
+                prediction_class = best_class
+                confidence = round(preds[best_class] * 100, 1)
+
+        # Format 3: object detection - ada key "predictions" berupa list
+        elif isinstance(result.get("predictions"), list) and result["predictions"]:
+            best = max(result["predictions"], key=lambda x: x.get("confidence", 0))
+            prediction_class = best.get("class", "Unknown")
+            confidence = round(best.get("confidence", 0) * 100, 1)
+
+        if not prediction_class:
+            prediction_class = "Unknown"
+            confidence = 0
+
         label_info = get_label_info(prediction_class)
 
     except Exception as e:
@@ -191,4 +204,5 @@ def detect():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
