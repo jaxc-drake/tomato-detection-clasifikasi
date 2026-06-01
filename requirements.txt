@@ -1,4 +1,5 @@
 flask
 gunicorn
-inference
+inference-sdk
+opencv-python-headless
 python-dotenv
