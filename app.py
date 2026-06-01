@@ -148,16 +148,20 @@ def detect():
     try:
         result = roboflow_infer(save_path)
 
-        predictions = result.get("predictions", [])
-
-        if predictions:
-            best = max(predictions, key=lambda x: x.get("confidence", 0))
-            prediction_class = best.get("class", "Unknown")
-            confidence = round(best.get("confidence", 0) * 100, 1)
-        else:
-            prediction_class = result.get("top", "Unknown")
+        top_class = result.get("top")
+        if top_class:
+            prediction_class = top_class
             confidence = round(result.get("confidence", 0) * 100, 1)
-
+        else:
+            predictions = result.get("predictions", [])
+            if predictions:
+                best = max(predictions, key=lambda x: x.get("confidence", 0))
+                prediction_class = best.get("class", "Unknown")
+                confidence = round(best.get("confidence", 0) * 100, 1)
+            else:
+                prediction_class = "Unknown"
+                confidence = 0
+                
         label_info = get_label_info(prediction_class)
 
     except Exception as e:
