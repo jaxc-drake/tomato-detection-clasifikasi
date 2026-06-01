@@ -2,4 +2,3 @@ flask
 gunicorn
 inference-sdk
 python-dotenv
-opencv-python-headless
