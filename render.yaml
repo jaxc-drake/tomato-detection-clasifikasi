@@ -1,0 +1,9 @@
+  services:
+  - type: web
+    name: tomato-disease-detector
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: ROBOFLOW_API_KEY
+        sync: false

@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TomatoAI — Deteksi Penyakit Daun Tomat</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --red:#c0392b;--green:#1e4620;--green2:#2d6a35;--green3:#4caf50;
+  --cream:#f5efe0;--gold:#d4a017;--dark:#0d1f0e;
+}
+html{scroll-behavior:smooth}
+body{font-family:'Manrope',sans-serif;background:#0d1f0e;color:#fff;overflow-x:hidden}
+
+/* ─── NAV ─── */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;justify-content:space-between;align-items:center;padding:1.2rem 4rem;background:rgba(13,31,14,0.7);backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,255,255,0.06)}
+.nav-logo{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:.08em;color:#fff}
+.nav-logo span{color:var(--gold)}
+.nav-links{display:flex;gap:2.5rem;list-style:none}
+.nav-links a{color:rgba(255,255,255,0.65);font-size:.85rem;font-weight:500;text-decoration:none;letter-spacing:.05em;text-transform:uppercase;transition:color .2s}
+.nav-links a:hover{color:#fff}
+
+/* ─── HERO ─── */
+.hero{position:relative;height:100vh;display:flex;align-items:center;overflow:hidden}
+.hero-bg{position:absolute;inset:0;background-image:url('/static/bg1.jpg');background-size:cover;background-position:center;transition:opacity 1.5s ease}
+.hero-bg.fade{opacity:0}
+.hero-overlay{position:absolute;inset:0;background:linear-gradient(to right,rgba(13,31,14,.85) 45%,rgba(13,31,14,.3))}
+.hero-content{position:relative;z-index:2;padding:0 4rem;max-width:680px}
+.hero-tag{display:inline-flex;align-items:center;gap:8px;background:rgba(212,160,23,.15);border:1px solid rgba(212,160,23,.3);color:var(--gold);font-size:.72rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;padding:6px 16px;border-radius:100px;margin-bottom:1.5rem}
+.hero-tag::before{content:'';width:6px;height:6px;background:var(--gold);border-radius:50%;animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.hero h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(3.5rem,8vw,6rem);line-height:.95;letter-spacing:.02em;margin-bottom:1.5rem}
+.hero h1 em{color:var(--gold);font-style:normal}
+.hero p{font-size:1rem;line-height:1.75;color:rgba(255,255,255,.7);max-width:480px;margin-bottom:2.5rem}
+.btn-primary{display:inline-flex;align-items:center;gap:10px;background:var(--gold);color:#0d1f0e;font-family:'Manrope',sans-serif;font-size:.9rem;font-weight:700;padding:.9rem 2rem;border-radius:100px;text-decoration:none;transition:transform .2s,box-shadow .2s;border:none;cursor:pointer}
+.btn-primary:hover{transform:translateY(-3px);box-shadow:0 12px 30px rgba(212,160,23,.35)}
+.btn-primary svg{width:16px;height:16px}
+.hero-scroll{position:absolute;bottom:2rem;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;color:rgba(255,255,255,.4);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase}
+.scroll-line{width:1px;height:50px;background:linear-gradient(to bottom,rgba(255,255,255,.4),transparent);animation:scrolldown 1.5s ease infinite}
+@keyframes scrolldown{0%{transform:scaleY(0);transform-origin:top}50%{transform:scaleY(1);transform-origin:top}51%{transform:scaleY(1);transform-origin:bottom}100%{transform:scaleY(0);transform-origin:bottom}}
+
+/* ─── TOMATO INFO SECTION ─── */
+.section{padding:6rem 4rem}
+.section-tag{display:inline-block;font-size:.7rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);margin-bottom:1rem}
+.section-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(2.5rem,5vw,3.8rem);line-height:1;margin-bottom:1rem}
+.section-sub{font-size:.95rem;color:rgba(255,255,255,.6);line-height:1.7;max-width:500px}
+
+.tomato-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px;margin-top:4rem}
+.tomato-card{position:relative;overflow:hidden;aspect-ratio:4/5;cursor:pointer}
+.tomato-card img{width:100%;height:100%;object-fit:cover;transition:transform .6s ease}
+.tomato-card:hover img{transform:scale(1.06)}
+.tomato-card-overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(13,31,14,.9) 0%,transparent 50%);display:flex;flex-direction:column;justify-content:flex-end;padding:2rem}
+.tomato-card h3{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:.05em;margin-bottom:.5rem}
+.tomato-card p{font-size:.85rem;color:rgba(255,255,255,.7);line-height:1.6}
+
+/* ─── STATS ─── */
+.stats-section{background:var(--cream);color:#0d1f0e;padding:5rem 4rem}
+.stats-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(2rem,4vw,3rem);color:#0d1f0e;margin-bottom:.5rem}
+.stats-sub{color:#555;font-size:.95rem;margin-bottom:3rem;max-width:500px;line-height:1.6}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1.5rem}
+.stat-box{background:#fff;border-radius:16px;padding:1.5rem;border:1px solid #e8e0d0}
+.stat-num{font-family:'Bebas Neue',sans-serif;font-size:2.8rem;color:var(--green2);line-height:1}
+.stat-unit{font-size:.8rem;font-weight:600;color:var(--green2);letter-spacing:.05em;text-transform:uppercase;margin-bottom:.4rem}
+.stat-label{font-size:.82rem;color:#666;line-height:1.5}
+
+.benefits-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;margin-top:3rem}
+.benefit-card{background:#fff;border-radius:16px;padding:1.5rem;border:1px solid #e8e0d0}
+.benefit-icon{font-size:1.8rem;margin-bottom:.75rem}
+.benefit-card h4{font-weight:700;font-size:.95rem;color:#0d1f0e;margin-bottom:.4rem}
+.benefit-card p{font-size:.82rem;color:#666;line-height:1.6}
+
+/* ─── AI DETECT SECTION ─── */
+.detect-section{padding:6rem 4rem;background:var(--dark);position:relative;overflow:hidden}
+.detect-section::before{content:'';position:absolute;top:-200px;right:-200px;width:600px;height:600px;background:radial-gradient(circle,rgba(76,175,80,.08) 0%,transparent 70%);pointer-events:none}
+.detect-wrapper{display:grid;grid-template-columns:1fr 1.2fr;gap:4rem;align-items:start}
+.detect-left .section-title{color:#fff}
+.detect-left p{color:rgba(255,255,255,.6);line-height:1.7;margin-top:1rem;font-size:.95rem}
+.accuracy-pill{display:inline-flex;align-items:center;gap:8px;background:rgba(76,175,80,.15);border:1px solid rgba(76,175,80,.3);color:#4caf50;font-size:.8rem;font-weight:600;padding:8px 16px;border-radius:100px;margin-top:1.5rem}
+.accuracy-pill::before{content:'';width:8px;height:8px;background:#4caf50;border-radius:50%;animation:blink 2s infinite}
+
+.upload-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:24px;padding:2rem;backdrop-filter:blur(10px)}
+.drop-zone{border:2px dashed rgba(255,255,255,.15);border-radius:16px;padding:3rem 2rem;text-align:center;cursor:pointer;transition:all .3s;position:relative;overflow:hidden}
+.drop-zone:hover,.drop-zone.over{border-color:var(--green3);background:rgba(76,175,80,.05)}
+.drop-icon{font-size:2.5rem;margin-bottom:1rem}
+.drop-zone h4{font-weight:600;font-size:1rem;margin-bottom:.4rem}
+.drop-zone p{font-size:.82rem;color:rgba(255,255,255,.45)}
+#file-input{display:none}
+.drop-content{transition:opacity .3s}
+#preview-wrap{display:none;position:absolute;inset:0;border-radius:14px;overflow:hidden}
+#preview-img{width:100%;height:100%;object-fit:cover}
+.preview-change{position:absolute;bottom:10px;right:10px;background:rgba(0,0,0,.6);backdrop-filter:blur(6px);color:#fff;font-size:.72rem;font-weight:600;padding:5px 12px;border-radius:100px;cursor:pointer;border:1px solid rgba(255,255,255,.2)}
+.preview-badge{position:absolute;top:10px;left:10px;background:rgba(76,175,80,.85);color:#fff;font-size:.7rem;font-weight:700;letter-spacing:.06em;padding:4px 12px;border-radius:100px;text-transform:uppercase}
+.btn-detect{width:100%;margin-top:1.25rem;padding:1rem;background:var(--green2);color:#fff;font-family:'Manrope',sans-serif;font-size:.95rem;font-weight:700;border:none;border-radius:12px;cursor:pointer;transition:all .3s;letter-spacing:.02em}
+.btn-detect:hover{background:var(--green3);transform:translateY(-2px)}
+.btn-detect:disabled{opacity:.4;cursor:not-allowed;transform:none}
+
+.loading-state{display:none;text-align:center;padding:1.5rem}
+.spinner{width:32px;height:32px;border:3px solid rgba(76,175,80,.2);border-top-color:var(--green3);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto .75rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-state p{font-size:.85rem;color:rgba(255,255,255,.5)}
+
+/* ─── RESULT INLINE ─── */
+.result-inline{display:none;margin-top:1.5rem;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:1.5rem;animation:fadeIn .4s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.result-header{display:flex;align-items:center;gap:1rem;margin-bottom:1rem}
+.result-emoji{font-size:2.2rem}
+.result-label{font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.4);margin-bottom:2px}
+.result-name{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:.03em}
+.result-name.danger{color:#e74c3c}
+.result-name.warning{color:var(--gold)}
+.result-name.success{color:var(--green3)}
+.conf-row{display:flex;align-items:center;gap:12px;margin-bottom:1.25rem;background:rgba(0,0,0,.2);padding:.75rem 1rem;border-radius:10px}
+.conf-label{font-size:.72rem;color:rgba(255,255,255,.45);white-space:nowrap;font-weight:600;letter-spacing:.05em;text-transform:uppercase}
+.conf-track{flex:1;height:6px;background:rgba(255,255,255,.1);border-radius:100px;overflow:hidden}
+.conf-fill{height:100%;background:var(--gold);border-radius:100px;transition:width 1s ease;width:0%}
+.conf-val{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--gold);white-space:nowrap}
+.info-row{background:rgba(255,255,255,.05);border-radius:10px;padding:1rem;margin-bottom:.75rem}
+.info-row-title{font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.35);margin-bottom:.4rem}
+.info-row p{font-size:.88rem;color:rgba(255,255,255,.8);line-height:1.65}
+.tips-row{background:var(--green2);border-radius:10px;padding:1rem}
+.tips-row .info-row-title{color:rgba(255,255,255,.5)}
+.tips-row p{font-size:.88rem;color:rgba(255,255,255,.9);line-height:1.65}
+
+/* ─── FOOTER ─── */
+footer{background:#060f07;padding:3rem 4rem;display:flex;justify-content:space-between;align-items:center;border-top:1px solid rgba(255,255,255,.06)}
+.foot-logo{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:#fff}
+.foot-logo span{color:var(--gold)}
+footer p{font-size:.78rem;color:rgba(255,255,255,.3)}
+
+/* ─── SCROLL REVEAL ─── */
+.reveal{opacity:0;transform:translateY(40px);transition:opacity .7s ease,transform .7s ease}
+.reveal.visible{opacity:1;transform:translateY(0)}
+.reveal-delay-1{transition-delay:.1s}
+.reveal-delay-2{transition-delay:.2s}
+.reveal-delay-3{transition-delay:.3s}
+
+@media(max-width:768px){
+  nav{padding:1rem 1.5rem}
+  .hero-content,.section,.stats-section,.detect-section{padding-left:1.5rem;padding-right:1.5rem}
+  .tomato-grid,.stats-grid,.benefits-grid,.detect-wrapper{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">Tomato<span>AI</span></div>
+  <ul class="nav-links">
+    <li><a href="#home">Home</a></li>
+    <li><a href="#tentang">Tentang Tomat</a></li>
+    <li><a href="#deteksi">Deteksi AI</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="home">
+  <div class="hero-bg" id="heroBg"></div>
+  <div class="hero-overlay"></div>
+  <div class="hero-content">
+    <div class="hero-tag">AI Powered · 98.1% Akurasi</div>
+    <h1>Jaga Kesehatan<br><em>Tanaman</em><br>Tomatmu</h1>
+    <p>Deteksi penyakit daun tomat secara instan menggunakan kecerdasan buatan. Upload foto daun dan dapatkan diagnosis beserta panduan perawatan yang tepat.</p>
+    <a href="#deteksi" class="btn-primary">
+      Mulai Deteksi
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+    </a>
+  </div>
+  <div class="hero-scroll">
+    <div class="scroll-line"></div>
+    <span>Scroll</span>
+  </div>
+</section>
+
+<!-- TOMATO INFO -->
+<section class="section" id="tentang">
+  <div class="reveal">
+    <span class="section-tag">🍅 Komoditi Unggulan Indonesia</span>
+    <h2 class="section-title">Mengenal Lebih Dalam<br>Buah Tomat</h2>
+    <p class="section-sub">Tomat adalah salah satu sayuran buah paling bernilai di Indonesia, dengan produksi tahunan mencapai jutaan ton dan menjadi andalan petani nusantara.</p>
+  </div>
+
+  <div class="tomato-grid reveal reveal-delay-1">
+    <div class="tomato-card">
+      <img src="/static/bg2.jpg" alt="Tomat Segar">
+      <div class="tomato-card-overlay">
+        <h3>Kaya Nutrisi</h3>
+        <p>Sumber likopen, vitamin C, K, folat, dan kalium. Konsumsi rutin tomat terbukti menurunkan risiko penyakit jantung dan kanker.</p>
+      </div>
+    </div>
+    <div class="tomato-card">
+      <img src="/static/bg3.jpg" alt="Perkebunan Tomat">
+      <div class="tomato-card-overlay">
+        <h3>Komoditi Strategis</h3>
+        <p>Indonesia menghasilkan 900.000+ ton tomat per tahun. Jawa Barat, Jawa Tengah, dan Sumatera Utara menjadi sentra produksi utama.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STATS & MANFAAT -->
+<section class="stats-section reveal" id="statistik">
+  <span class="section-tag" style="color:var(--green2)">📊 Data & Fakta</span>
+  <h2 class="stats-title">Tomat dalam Angka</h2>
+  <p class="stats-sub">Kontribusi nyata tomat terhadap ketahanan pangan dan ekonomi petani Indonesia.</p>
+
+  <div class="stats-grid">
+    <div class="stat-box reveal reveal-delay-1">
+      <div class="stat-num">900K+</div>
+      <div class="stat-unit">Ton / Tahun</div>
+      <div class="stat-label">Produksi nasional tomat Indonesia per tahun</div>
+    </div>
+    <div class="stat-box reveal reveal-delay-2">
+      <div class="stat-num">Rp 8T</div>
+      <div class="stat-unit">Nilai Pasar</div>
+      <div class="stat-label">Nilai ekonomi industri tomat nasional</div>
+    </div>
+    <div class="stat-box reveal reveal-delay-3">
+      <div class="stat-num">250K+</div>
+      <div class="stat-unit">Petani</div>
+      <div class="stat-label">Rumah tangga petani yang mengandalkan komoditi tomat</div>
+    </div>
+    <div class="stat-box reveal">
+      <div class="stat-num">30%</div>
+      <div class="stat-unit">Kerugian</div>
+      <div class="stat-label">Rata-rata kerugian panen akibat penyakit yang tidak terdeteksi dini</div>
+    </div>
+  </div>
+
+  <h3 style="font-family:'Bebas Neue',sans-serif;font-size:2rem;color:#0d1f0e;margin-top:3rem;margin-bottom:.5rem">Manfaat Tomat untuk Kesehatan</h3>
+  <p style="color:#666;font-size:.9rem;margin-bottom:2rem">Mengapa tomat begitu penting bagi kehidupan sehari-hari</p>
+
+  <div class="benefits-grid">
+    <div class="benefit-card reveal reveal-delay-1">
+      <div class="benefit-icon">❤️</div>
+      <h4>Kesehatan Jantung</h4>
+      <p>Likopen dalam tomat terbukti mengurangi oksidasi kolesterol LDL dan menurunkan risiko penyakit kardiovaskular hingga 26%.</p>
+    </div>
+    <div class="benefit-card reveal reveal-delay-2">
+      <div class="benefit-icon">🛡️</div>
+      <h4>Antioksidan Kuat</h4>
+      <p>Kandungan vitamin C dan E yang tinggi membantu melawan radikal bebas, menjaga sistem imun, dan memperlambat penuaan sel.</p>
+    </div>
+    <div class="benefit-card reveal reveal-delay-3">
+      <div class="benefit-icon">👁️</div>
+      <h4>Menjaga Penglihatan</h4>
+      <p>Beta-karoten dan lutein dalam tomat mendukung kesehatan mata dan mengurangi risiko degenerasi makula terkait usia.</p>
+    </div>
+    <div class="benefit-card reveal">
+      <div class="benefit-icon">🦴</div>
+      <h4>Kekuatan Tulang</h4>
+      <p>Vitamin K dan kalsium pada tomat berperan penting dalam pembentukan dan pemeliharaan kepadatan tulang.</p>
+    </div>
+    <div class="benefit-card reveal reveal-delay-1">
+      <div class="benefit-icon">🧬</div>
+      <h4>Anti Kanker</h4>
+      <p>Penelitian menunjukkan konsumsi tomat rutin berkaitan dengan penurunan risiko kanker prostat, paru, dan saluran pencernaan.</p>
+    </div>
+    <div class="benefit-card reveal reveal-delay-2">
+      <div class="benefit-icon">⚖️</div>
+      <h4>Kontrol Berat Badan</h4>
+      <p>Rendah kalori namun tinggi serat dan air, tomat sangat ideal untuk diet sehat dan menjaga berat badan ideal.</p>
+    </div>
+  </div>
+</section>
+
+<!-- DETECT SECTION -->
+<section class="detect-section" id="deteksi">
+  <div class="detect-wrapper">
+    <div class="detect-left reveal">
+      <span class="section-tag">🤖 Teknologi AI</span>
+      <h2 class="section-title">Deteksi Penyakit<br>Daun Tomat</h2>
+      <p>Upload foto daun tomatmu dan sistem AI kami akan menganalisa secara instan — mendeteksi jenis penyakit, tingkat kepercayaan, deskripsi kondisi, serta rekomendasi perawatan yang tepat.</p>
+      <div class="accuracy-pill">Model Akurasi Validasi: 98.1%</div>
+
+      <div style="margin-top:2rem;padding:1.25rem;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:14px">
+        <p style="font-size:.8rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.35);margin-bottom:.75rem">Penyakit yang dapat terdeteksi</p>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          <span style="font-size:.72rem;background:rgba(76,175,80,.12);border:1px solid rgba(76,175,80,.2);color:rgba(255,255,255,.7);padding:4px 10px;border-radius:100px">🦠 Bacterial Spot</span>
+          <span style="font-size:.72rem;background:rgba(76,175,80,.12);border:1px solid rgba(76,175,80,.2);color:rgba(255,255,255,.7);padding:4px 10px;border-radius:100px">🍂 Early Blight</span>
+          <span style="font-size:.72rem;background:rgba(76,175,80,.12);border:1px solid rgba(76,175,80,.2);color:rgba(255,255,255,.7);padding:4px 10px;border-radius:100px">⚠️ Late Blight</span>
+          <span style="font-size:.72rem;background:rgba(76,175,80,.12);border:1px solid rgba(76,175,80,.2);color:rgba(255,255,255,.7);padding:4px 10px;border-radius:100px">🍄 Leaf Mold</span>
+          <span style="font-size:.72rem;background:rgba(76,175,80,.12);border:1px solid rgba(76,175,80,.2);color:rgba(255,255,255,.7);padding:4px 10px;border-radius:100px">🔵 Septoria</span>
+          <span style="font-size:.72rem;background:rgba(76,175,80,.12);border:1px solid rgba(76,175,80,.2);color:rgba(255,255,255,.7);padding:4px 10px;border-radius:100px">🕷️ Spider Mites</span>
+          <span style="font-size:.72rem;background:rgba(76,175,80,.12);border:1px solid rgba(76,175,80,.2);color:rgba(255,255,255,.7);padding:4px 10px;border-radius:100px">🎯 Target Spot</span>
+          <span style="font-size:.72rem;background:rgba(76,175,80,.12);border:1px solid rgba(76,175,80,.2);color:rgba(255,255,255,.7);padding:4px 10px;border-radius:100px">🧬 Mosaic Virus</span>
+          <span style="font-size:.72rem;background:rgba(76,175,80,.12);border:1px solid rgba(76,175,80,.2);color:rgba(255,255,255,.7);padding:4px 10px;border-radius:100px">🌀 Yellow Curl</span>
+          <span style="font-size:.72rem;background:rgba(76,175,80,.12);border:1px solid rgba(76,175,80,.2);color:rgba(255,255,255,.7);padding:4px 10px;border-radius:100px">✅ Sehat</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="reveal reveal-delay-2">
+      <div class="upload-card">
+        <form id="detect-form" method="POST" action="/detect" enctype="multipart/form-data">
+          <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+            <div class="drop-content" id="drop-content">
+              <div class="drop-icon">🍃</div>
+              <h4>Drop foto daun di sini</h4>
+              <p>atau klik untuk pilih file · JPG, PNG · Max 10MB</p>
+            </div>
+            <div id="preview-wrap">
+              <img id="preview-img" src="" alt="Preview">
+              <span class="preview-badge">✓ Siap Dideteksi</span>
+              <span class="preview-change" onclick="event.stopPropagation();document.getElementById('file-input').click()">Ganti Foto</span>
+            </div>
+            <input type="file" id="file-input" name="file" accept="image/*">
+          </div>
+
+          <button type="submit" class="btn-detect" id="btn-detect" disabled>
+            🔍 Analisa Sekarang
+          </button>
+        </form>
+
+        <div class="loading-state" id="loading">
+          <div class="spinner"></div>
+          <p>Menganalisa gambar dengan AI...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="foot-logo">Tomato<span>AI</span></div>
+  <p>Powered by Roboflow · 18.335 Training Images · © 2025</p>
+</footer>
+
+<script>
+// Hero background slideshow
+const images = ['/static/bg1.jpg','/static/bg2.jpg','/static/bg3.jpg'];
+let imgIdx = 0;
+const heroBg = document.getElementById('heroBg');
+heroBg.style.backgroundImage = `url('${images[0]}')`;
+setInterval(() => {
+  heroBg.classList.add('fade');
+  setTimeout(() => {
+    imgIdx = (imgIdx + 1) % images.length;
+    heroBg.style.backgroundImage = `url('${images[imgIdx]}')`;
+    heroBg.classList.remove('fade');
+  }, 1500);
+}, 5000);
+
+// Scroll reveal
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); });
+}, {threshold: 0.12});
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+// Upload & preview
+const fileInput = document.getElementById('file-input');
+const previewImg = document.getElementById('preview-img');
+const previewWrap = document.getElementById('preview-wrap');
+const dropContent = document.getElementById('drop-content');
+const btnDetect = document.getElementById('btn-detect');
+const dropZone = document.getElementById('drop-zone');
+const form = document.getElementById('detect-form');
+const loading = document.getElementById('loading');
+
+function handleFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    previewImg.src = e.target.result;
+    previewWrap.style.display = 'block';
+    dropContent.style.opacity = '0';
+    dropContent.style.pointerEvents = 'none';
+    btnDetect.disabled = false;
+  };
+  reader.readAsDataURL(file);
+}
+
+fileInput.addEventListener('change', () => handleFile(fileInput.files[0]));
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('over');
+  const file = e.dataTransfer.files[0];
+  if (file) { fileInput.files = e.dataTransfer.files; handleFile(file); }
+});
+
+form.addEventListener('submit', () => {
+  btnDetect.style.display = 'none';
+  loading.style.display = 'block';
+});
+</script>
+</body>
+</html>
