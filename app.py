@@ -1,14 +1,15 @@
 import os
+import base64
+import requests
 from flask import Flask, render_template, request, redirect, url_for
-from inference_sdk import InferenceHTTPClient
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # ==============================
 # ROBOFLOW SETTINGS
 # ==============================
-CLIENT = InferenceHTTPClient(
-    api_url="https://serverless.roboflow.com",
-    api_key=os.environ.get("ROBOFLOW_API_KEY")  # ← dari env variable
-)
+ROBOFLOW_API_KEY = os.environ.get("ROBOFLOW_API_KEY")
 MODEL_ID = "deteksi-penyakit-daun-tomat-sljaj/1"
 MODEL_ACCURACY = 98.1
 
@@ -89,22 +90,18 @@ LABEL_TRANSLATE = {
 }
 
 def get_label_info(prediction_class):
-    """Cari label info dengan fuzzy matching untuk handle variasi nama kelas"""
-    # Coba exact match dulu
     if prediction_class in LABEL_TRANSLATE:
         return LABEL_TRANSLATE[prediction_class]
-    
-    # Coba normalisasi: ganti spasi/strip dan lowercase
+
     pred_lower = prediction_class.lower().replace(" ", "_").replace("-", "_")
     for key, val in LABEL_TRANSLATE.items():
         if key.lower().replace("-", "_") == pred_lower:
             return val
-    
-    # Coba partial match
+
     for key, val in LABEL_TRANSLATE.items():
         if pred_lower in key.lower() or key.lower() in pred_lower:
             return val
-    
+
     return {
         "id": prediction_class,
         "emoji": "🔍",
@@ -113,9 +110,24 @@ def get_label_info(prediction_class):
         "level": "warning"
     }
 
+def roboflow_infer(image_path):
+    """Kirim gambar ke Roboflow API pakai requests (tanpa inference_sdk)"""
+    with open(image_path, "rb") as f:
+        image_data = base64.b64encode(f.read()).decode("utf-8")
+
+    url = f"https://serverless.roboflow.com/{MODEL_ID}?api_key={ROBOFLOW_API_KEY}"
+    response = requests.post(
+        url,
+        json={"image": image_data},
+        headers={"Content-Type": "application/json"}
+    )
+    return response.json()
+
 
 app = Flask(__name__)
 app.config["UPLOAD_FOLDER"] = "static/uploads"
+
+os.makedirs("static/uploads", exist_ok=True)
 
 
 @app.route("/", methods=["GET"])
@@ -134,22 +146,17 @@ def detect():
     file.save(save_path)
 
     try:
-        # Kirim ke Roboflow API
-        result = CLIENT.infer(save_path, model_id=MODEL_ID)
+        result = roboflow_infer(save_path)
 
-        # Ambil prediksi terbaik
         predictions = result.get("predictions", [])
-        
+
         if predictions:
-            # Ambil prediksi dengan confidence tertinggi
             best = max(predictions, key=lambda x: x.get("confidence", 0))
             prediction_class = best.get("class", "Unknown")
             confidence = round(best.get("confidence", 0) * 100, 1)
         else:
-            # Fallback jika format berbeda (classification)
-            top_class = result.get("top", "Unknown")
+            prediction_class = result.get("top", "Unknown")
             confidence = round(result.get("confidence", 0) * 100, 1)
-            prediction_class = top_class
 
         label_info = get_label_info(prediction_class)
 
@@ -180,5 +187,4 @@ def detect():
 
 
 if __name__ == "__main__":
-    os.makedirs("static/uploads", exist_ok=True)
     app.run(debug=True)
